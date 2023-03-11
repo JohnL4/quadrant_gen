@@ -13,7 +13,7 @@ fn main() {
     println!();
     println!( "1<<15 = {}", 1<<15);
     generate_systems( &mut rng);
-    draw_grid(8, 10, 5, 3, &mut rng);
+    draw_grid(8, 10, 6, 3, &mut rng);
 }
 
 /// Draw a hex grid
