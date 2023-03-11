@@ -138,15 +138,18 @@ fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizon
     print!( "{:02}  ", row);
     for i in 0..num_cols/2 {
         if rng.gen_range(1..=6) < 4 {
+            // No star system
             print!( "{}{:<space_width$}{}{:_<edge_width$}", "/", "", "\\", ""
                 ,space_width = a_horizontal_length + 2*(a_diag_length - 1)      // 2* for both sides, -1 for '/' char
                 ,edge_width = a_horizontal_length
             );
         }
         else {
+            // Star system! Draw symbol.
             let starchar = if a_diag_length <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
-            print!( "{}{:<space_width$}{}{:<space_width$}{}{:_<edge_width$}", "/", "", starchar, "", "\\", ""
-                ,space_width = (a_horizontal_length - 1)/2 + a_diag_length - 1      // -1 for starchar, /2 to split in half (both sides)
+            print!( "{}{:<space1_width$}{}{:<space2_width$}{}{:_<edge_width$}", "/", "", starchar, "", "\\", ""
+                ,space1_width = (a_horizontal_length - 1)/2 + a_diag_length - 1      // -1 for starchar, /2 to split in half (both sides)
+                ,space2_width = (a_horizontal_length)/2 + a_diag_length - 1         // Dropped one "-1" to account for rounding when horiz_length is even or odd.
                 ,edge_width = a_horizontal_length
             );
         }
