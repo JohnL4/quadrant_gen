@@ -13,7 +13,7 @@ fn main() {
     println!();
     println!( "1<<15 = {}", 1<<15);
     generate_systems( &mut rng);
-    draw_grid(8, 10, 6, 3, &mut rng);
+    draw_grid(8, 10, 7, 3, &mut rng);
 }
 
 /// Draw a hex grid
@@ -137,7 +137,7 @@ fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num:
 fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, rng: &mut ThreadRng) {
     print!( "{:02}  ", row);
     for i in 0..num_cols/2 {
-        if rng.gen_range(1..=6) < 4 {
+        if rng.gen_range(1..=6) < 1 {
             // No star system
             print!( "{}{:<space_width$}{}{:_<edge_width$}", "/", "", "\\", ""
                 ,space_width = a_horizontal_length + 2*(a_diag_length - 1)      // 2* for both sides, -1 for '/' char
