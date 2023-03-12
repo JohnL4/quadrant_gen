@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use clap::Parser;
 
 use rand::prelude::*;
@@ -9,11 +11,11 @@ const COL_MAX: i32 = 10;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 8)]
+    #[arg(short, long, default_value_t = 4)]
     rows: usize,
 
     /// Number of columns in map.  Conventional values are 10, 20, 14.
-    #[arg(short, long, default_value_t = 10)]
+    #[arg(short, long, default_value_t = 6)]
     cols: usize,
 
     /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
@@ -31,21 +33,33 @@ struct Args {
     diagonal_edge_length: usize
 }
 
+/// Index into starmap.
+#[derive(PartialEq, Eq, Hash)]
+struct RowCol {
+    row: usize,
+    col: usize
+}
+
+/// Map from RowCol to characteristic string for star system at that location.
+type StarMap = HashMap<RowCol, String>;
+
 fn main() {
     let args = Args::parse();
     let mut rng = thread_rng();
-    for i in 1..=6 {
-        print!( "{:4}: {:<6}", i, rng.gen_range( 1..=6));
-    }
-    println!();
-    println!( "1<<15 = {}", 1<<15);
-    generate_systems( &mut rng);
-    draw_grid( args.rows, args.cols, args.world_chance_die_modifier, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng);
-    // draw_grid(8, 10, 4, 2, &mut rng);
+    let mut starmap: StarMap = HashMap::new();
+
+    // for i in 1..=6 {
+    //     print!( "{:4}: {:<6}", i, rng.gen_range( 1..=6));
+    // }
+    // println!();
+    // println!( "1<<15 = {}", 1<<15);
+    // generate_systems( &mut rng);
+    draw_grid( args.rows, args.cols, args.world_chance_die_modifier, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng, &mut starmap);
+    generate_systems( &mut starmap, &mut rng, args.rows, args.cols);
 }
 
 /// Draw a hex grid
-fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng) {
+fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng, mut starmap: &mut StarMap) {
 
     enum DrawState {
         /// Currently drawing top edges of hexes
@@ -90,7 +104,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_l
                     }
                 }
                 DrawState::Middles => {
-                    draw_hex_middles( row, num_cols, density_dm, a_diagonal_length, a_horizontal_length, row == 1, row == num_rows+1, &mut rng);
+                    draw_hex_middles( row, num_cols, density_dm, a_diagonal_length, a_horizontal_length, row == 1, row == num_rows+1, &mut rng, &mut starmap);
                     draw_state = DrawState::DiagonalsLower { diag_row_num: 0 };
                 }
                 DrawState::DiagonalsLower { diag_row_num } => {
@@ -103,7 +117,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_l
                     }
                 }
                 DrawState::BottomEdge => {
-                    if row <= num_rows { draw_hex_bottoms( num_cols, density_dm, a_diagonal_length, a_horizontal_length, &mut rng); }
+                    if row <= num_rows { draw_hex_bottoms( row, num_cols, density_dm, a_diagonal_length, a_horizontal_length, &mut rng, &mut starmap); }
                     draw_state = DrawState::DiagonalsUpper { diag_row_num: 0 };
                 }
                 _ => {unreachable!()}
@@ -163,7 +177,7 @@ fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num:
     }
 }
 
-fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng) {
+fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng, starmap: &mut StarMap) {
     if is_last_row {
         print!( "    ");
     }
@@ -181,6 +195,7 @@ fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_lengt
         }
         else {
             // Star system! Draw symbol.
+            starmap.insert(RowCol{row, col: 2*i+1}, "".to_string());
             let starchar = if a_diag_length <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{}{:<space1_width$}{}{:<space2_width$}{}{:_<edge_width$}", "/", "", starchar, "", "\\", ""
                 ,space1_width = (a_horizontal_length - 1)/2 + a_diag_length - 1      // -1 for starchar, /2 to split in half (both sides)
@@ -208,7 +223,7 @@ fn draw_bottom_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_n
     );
 }
 
-fn draw_hex_bottoms(num_cols: usize, density_dm: usize, a_diag_width: usize, a_horiz_width: usize, mut rng: &mut ThreadRng) {
+fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: usize, a_diag_width: usize, a_horiz_width: usize,  rng: &mut ThreadRng, starmap: &mut StarMap) {
     print!( "    ");         // row header
     for i in 0..num_cols/2 {
         if rng.gen_range(1..=6) + density_dm < 4 {
@@ -219,6 +234,7 @@ fn draw_hex_bottoms(num_cols: usize, density_dm: usize, a_diag_width: usize, a_h
         }
         else {
             // Star system! Draw symbol.
+            starmap.insert(RowCol{row, col: 2*i+1}, "".to_string());
             let starchar = if a_diag_width <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:center1_width$}{}{:center2_width$}"
                 , "\\", "", "/", "", starchar, ""
@@ -234,13 +250,12 @@ fn draw_hex_bottoms(num_cols: usize, density_dm: usize, a_diag_width: usize, a_h
 }
 
 /// Generate star systems.
-fn generate_systems(rng: &mut ThreadRng) {
-    for row in 1..ROW_MAX {
-        println!( "row {}", row);
-        for col in 1..COL_MAX {
-            if rng.gen_range(1..=6) >= 4 {
-                println!( "  col {}", col);
-            }
+fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, cols: usize) {
+    for row in 1..=rows {
+        for col in 1..=cols {
+            let hex = RowCol{ row, col};
+            starmap.entry( hex).and_modify(|s| {*s = "done".to_string()});
+            println!( "{:02}{:02} -- {}", row, col, starmap.get(&hex).unwrap());
         }
     }
 }
