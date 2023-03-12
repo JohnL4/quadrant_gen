@@ -1,11 +1,32 @@
-use core::num;
+use clap::Parser;
 
 use rand::prelude::*;
 
 const ROW_MAX: i32 = 8;
 const COL_MAX: i32 = 10;
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Number of rows in map.  Conventional values are 8, 16, 32.
+    #[arg(short, long, default_value_t = 8)]
+    rows: usize,
+
+    /// Number of columns in map.  Conventional values are 10, 20, 14.
+    #[arg(short, long, default_value_t = 10)]
+    cols: usize,
+
+    /// Number of characters in horizontal hex cell.
+    #[arg(short('e'), long, default_value_t = 7)]
+    horizontal_edge_length: usize,
+
+    /// Number of characters in diagonal hex cell.
+    #[arg(short('d'), long, default_value_t = 3)]
+    diagonal_edge_length: usize
+}
+
 fn main() {
+    let args = Args::parse();
     let mut rng = thread_rng();
     for i in 1..=6 {
         print!( "{:4}: {:<6}", i, rng.gen_range( 1..=6));
@@ -13,7 +34,8 @@ fn main() {
     println!();
     println!( "1<<15 = {}", 1<<15);
     generate_systems( &mut rng);
-    draw_grid(8, 10, 7, 3, &mut rng);
+    draw_grid( args.rows, args.cols, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng);
+    // draw_grid(8, 10, 4, 2, &mut rng);
 }
 
 /// Draw a hex grid
@@ -24,7 +46,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_dia
         TopEdge,
 
         /// Current drawing diagonals of top halves of (leftmost) hexes
-        DiagonalsTop{ 
+        DiagonalsUpper{ 
             /// Which row number are we currently drawing (0-based)?
             diag_row_num: usize
         },
@@ -34,7 +56,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_dia
         Middles,
 
         /// Current drawing diagonals of bottom halves of (leftmost) hexes
-        DiagonalsBottom{ 
+        DiagonalsLower{ 
             /// Which row number are we currently drawing (0-based)? Reset to zero when transitioning from top to middle
             /// to bottom.
             diag_row_num: usize
@@ -47,36 +69,36 @@ fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_dia
     draw_column_headers(num_cols, a_diagonal_length, a_horizontal_length);
     draw_very_top_edge(num_cols, a_diagonal_length, a_horizontal_length);
 
-    let mut draw_state = DrawState::DiagonalsTop { diag_row_num: 0 };
-    for row in 1..=num_rows {
+    let mut draw_state = DrawState::DiagonalsUpper { diag_row_num: 0 };
+    for row in 1..=num_rows + 1 {
         // Diagonals up, diagonals down: *2
         for i in 0.. 2 * a_diagonal_length {
             match draw_state {
-                DrawState::DiagonalsTop { diag_row_num } => {
-                    draw_top_hex_halves( a_diagonal_length, a_horizontal_length, diag_row_num, num_cols, row == 1);
+                DrawState::DiagonalsUpper { diag_row_num } => {
+                    draw_top_hex_halves( a_diagonal_length, a_horizontal_length, diag_row_num, num_cols, row == 1, row == num_rows+1);
                     if diag_row_num >= a_diagonal_length-2 {        // -2 because the last "top diagonal" row is really the middle row
                         draw_state = DrawState::Middles;
                     }
                     else {
-                        draw_state = DrawState::DiagonalsTop { diag_row_num: diag_row_num+1 };
+                        draw_state = DrawState::DiagonalsUpper { diag_row_num: diag_row_num+1 };
                     }
                 }
                 DrawState::Middles => {
-                    draw_hex_middles( row, num_cols, a_diagonal_length, a_horizontal_length, row == 1, &mut rng);
-                    draw_state = DrawState::DiagonalsBottom { diag_row_num: 0 };
+                    draw_hex_middles( row, num_cols, a_diagonal_length, a_horizontal_length, row == 1, row == num_rows+1, &mut rng);
+                    draw_state = DrawState::DiagonalsLower { diag_row_num: 0 };
                 }
-                DrawState::DiagonalsBottom { diag_row_num } => {
-                    draw_bottom_hex_halves( a_diagonal_length, a_horizontal_length, diag_row_num, num_cols);
+                DrawState::DiagonalsLower { diag_row_num } => {
+                    if row <= num_rows {draw_bottom_hex_halves( a_diagonal_length, a_horizontal_length, diag_row_num, num_cols);}
                     if diag_row_num >= a_diagonal_length-2 {        // -2 because the last "bottom diagonal" row is really the bottoms of (leftmost) hexes.
                         draw_state = DrawState::BottomEdge;
                     }
                     else {
-                        draw_state = DrawState::DiagonalsBottom { diag_row_num: diag_row_num+1 };
+                        draw_state = DrawState::DiagonalsLower { diag_row_num: diag_row_num+1 };
                     }
                 }
                 DrawState::BottomEdge => {
-                    draw_hex_bottoms( num_cols, a_diagonal_length, a_horizontal_length);
-                    draw_state = DrawState::DiagonalsTop { diag_row_num: 0 };
+                    if row <= num_rows { draw_hex_bottoms( num_cols, a_diagonal_length, a_horizontal_length); }
+                    draw_state = DrawState::DiagonalsUpper { diag_row_num: 0 };
                 }
                 _ => {unreachable!()}
             }
@@ -115,10 +137,11 @@ fn draw_very_top_edge(num_cols: usize, a_diagonal_length: usize, a_horizontal_le
     println!();
 }
 
-fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num: usize, num_cols: usize, is_first_row: bool) {
+fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num: usize, num_cols: usize, is_first_row: bool, is_last_row: bool) {
     print!( "    ");         // row header
     for i in 0..num_cols/2 {
-        print!( "{:>diag_width$}{:<center1_width$}{:<diag_width$}{:<center2_width$}", "/", "", "\\", ""
+        let leading_slash = if i == 0 && is_last_row {" "} else {"/"};
+        print!( "{:>diag_width$}{:<center1_width$}{:<diag_width$}{:<center2_width$}", leading_slash, "", "\\", ""
             ,diag_width = a_diag_length - diag_row_num
             ,center1_width = a_horiz_width + diag_row_num*2     // *2 because need to expand center on BOTH sides.
             ,center2_width = a_horiz_width
@@ -134,12 +157,18 @@ fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num:
     }
 }
 
-fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, rng: &mut ThreadRng) {
-    print!( "{:02}  ", row);
+fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng) {
+    if is_last_row {
+        print!( "    ");
+    }
+    else {
+        print!( "{:02}  ", row);
+    }
     for i in 0..num_cols/2 {
-        if rng.gen_range(1..=6) < 1 {
+        if is_last_row || rng.gen_range(1..=6) < 1 {
             // No star system
-            print!( "{}{:<space_width$}{}{:_<edge_width$}", "/", "", "\\", ""
+            let leading_slash = if is_last_row && i == 0 {" "} else {"/"};
+            print!( "{}{:<space_width$}{}{:_<edge_width$}", leading_slash, "", "\\", ""
                 ,space_width = a_horizontal_length + 2*(a_diag_length - 1)      // 2* for both sides, -1 for '/' char
                 ,edge_width = a_horizontal_length
             );
