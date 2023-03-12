@@ -9,7 +9,7 @@ const COL_MAX: i32 = 10;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 8)]
     rows: usize,
 
     /// Number of columns in map.  Conventional values are 10, 20, 14.
