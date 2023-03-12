@@ -9,19 +9,25 @@ const COL_MAX: i32 = 10;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 8)]
+    #[arg(short, long, default_value_t = 4)]
     rows: usize,
 
     /// Number of columns in map.  Conventional values are 10, 20, 14.
     #[arg(short, long, default_value_t = 10)]
     cols: usize,
 
+    /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
+    /// (0) will result in a 50% chance of a star system being present.  -2 ==> rift sector; -1 ==> sparse sector;
+    /// +1 ==> dense sector.
+    #[arg(short, long, default_value_t = 0)]
+    world_chance_die_modifier: usize,
+
     /// Number of characters in horizontal hex cell.
-    #[arg(short('e'), long, default_value_t = 7)]
+    #[arg(short('e'), long, default_value_t = 5)]
     horizontal_edge_length: usize,
 
     /// Number of characters in diagonal hex cell.
-    #[arg(short('d'), long, default_value_t = 3)]
+    #[arg(short('d'), long, default_value_t = 2)]
     diagonal_edge_length: usize
 }
 
@@ -34,12 +40,12 @@ fn main() {
     println!();
     println!( "1<<15 = {}", 1<<15);
     generate_systems( &mut rng);
-    draw_grid( args.rows, args.cols, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng);
+    draw_grid( args.rows, args.cols, args.world_chance_die_modifier, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng);
     // draw_grid(8, 10, 4, 2, &mut rng);
 }
 
 /// Draw a hex grid
-fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng) {
+fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng) {
 
     enum DrawState {
         /// Currently drawing top edges of hexes
@@ -84,7 +90,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_dia
                     }
                 }
                 DrawState::Middles => {
-                    draw_hex_middles( row, num_cols, a_diagonal_length, a_horizontal_length, row == 1, row == num_rows+1, &mut rng);
+                    draw_hex_middles( row, num_cols, density_dm, a_diagonal_length, a_horizontal_length, row == 1, row == num_rows+1, &mut rng);
                     draw_state = DrawState::DiagonalsLower { diag_row_num: 0 };
                 }
                 DrawState::DiagonalsLower { diag_row_num } => {
@@ -97,7 +103,7 @@ fn draw_grid(num_rows: usize, num_cols: usize, a_horizontal_length: usize, a_dia
                     }
                 }
                 DrawState::BottomEdge => {
-                    if row <= num_rows { draw_hex_bottoms( num_cols, a_diagonal_length, a_horizontal_length); }
+                    if row <= num_rows { draw_hex_bottoms( num_cols, density_dm, a_diagonal_length, a_horizontal_length, &mut rng); }
                     draw_state = DrawState::DiagonalsUpper { diag_row_num: 0 };
                 }
                 _ => {unreachable!()}
@@ -157,7 +163,7 @@ fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num:
     }
 }
 
-fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng) {
+fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng) {
     if is_last_row {
         print!( "    ");
     }
@@ -165,7 +171,7 @@ fn draw_hex_middles(row: usize, num_cols: usize, a_diag_length: usize, a_horizon
         print!( "{:02}  ", row);
     }
     for i in 0..num_cols/2 {
-        if is_last_row || rng.gen_range(1..=6) < 1 {
+        if is_last_row || rng.gen_range(1..=6) + density_dm < 4 {
             // No star system
             let leading_slash = if is_last_row && i == 0 {" "} else {"/"};
             print!( "{}{:<space_width$}{}{:_<edge_width$}", leading_slash, "", "\\", ""
@@ -202,12 +208,25 @@ fn draw_bottom_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_n
     );
 }
 
-fn draw_hex_bottoms(num_cols: usize, a_diag_width: usize, a_horiz_width: usize) {
+fn draw_hex_bottoms(num_cols: usize, density_dm: usize, a_diag_width: usize, a_horiz_width: usize, mut rng: &mut ThreadRng) {
     print!( "    ");         // row header
     for i in 0..num_cols/2 {
-        print!("{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:<a_horiz_width$}", "\\", "", "/", ""
-            ,diag_width = a_diag_width
-        );
+        if rng.gen_range(1..=6) + density_dm < 4 {
+            // No star system.
+            print!("{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:<a_horiz_width$}", "\\", "", "/", ""
+                ,diag_width = a_diag_width
+            );
+        }
+        else {
+            // Star system! Draw symbol.
+            let starchar = if a_diag_width <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
+            print!( "{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:center1_width$}{}{:center2_width$}"
+                , "\\", "", "/", "", starchar, ""
+                ,diag_width = a_diag_width
+                ,center1_width = (a_horiz_width - 1)/2     // -1 for starchar, /2 to split in half (both sides)
+                ,center2_width = (a_horiz_width)/2         // Dropped one "-1" to account for rounding when horiz_length is even or odd.
+            );
+        }
     }
     print!("{:>diag_width$}", "\\"       // Trailing "\"
         ,diag_width = a_diag_width
