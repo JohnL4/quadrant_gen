@@ -11,18 +11,18 @@ const COL_MAX: i32 = 10;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 3)]
+    #[arg(short, long, default_value_t = 8)]
     rows: usize,
 
     /// Number of columns in map.  Conventional values are 10, 20, 14.
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 10)]
     cols: usize,
 
     /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
     /// (0) will result in a 50% chance of a star system being present.  -2 ==> rift sector; -1 ==> sparse sector;
     /// +1 ==> dense sector.
     #[arg(short, long, default_value_t = 0)]
-    world_chance_die_modifier: usize,
+    world_chance_die_modifier: isize,
 
     /// Number of characters in horizontal hex cell.
     #[arg(short('e'), long, default_value_t = 5)]
@@ -102,7 +102,7 @@ fn main() {
 }
 
 /// Draw a hex grid
-fn draw_grid(num_rows: usize, num_cols: usize, density_dm: usize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng, mut starmap: &mut StarMap) {
+fn draw_grid(num_rows: usize, num_cols: usize, density_dm: isize, a_horizontal_length: usize, a_diagonal_length: usize, mut rng: &mut ThreadRng, mut starmap: &mut StarMap) {
 
     enum DrawState {
         /// Currently drawing top edges of hexes
@@ -220,7 +220,7 @@ fn draw_top_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_num:
     }
 }
 
-fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng, starmap: &mut StarMap) {
+fn draw_hex_middles(row: usize, num_cols: usize, density_dm: isize, a_diag_length: usize, a_horizontal_length: usize, is_first_row: bool, is_last_row: bool, rng: &mut ThreadRng, starmap: &mut StarMap) {
     if is_last_row {
         print!( "    ");
     }
@@ -266,7 +266,7 @@ fn draw_bottom_hex_halves(a_diag_length: usize, a_horiz_width: usize, diag_row_n
     );
 }
 
-fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: usize, a_diag_width: usize, a_horiz_width: usize,  rng: &mut ThreadRng, starmap: &mut StarMap) {
+fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: isize, a_diag_width: usize, a_horiz_width: usize,  rng: &mut ThreadRng, starmap: &mut StarMap) {
     print!( "    ");         // row header
     for i in 0..num_cols/2 {
         if rng.gen_range(1..=6) + density_dm < 4 {
