@@ -11,11 +11,11 @@ const COL_MAX: i32 = 10;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 3)]
     rows: usize,
 
     /// Number of columns in map.  Conventional values are 10, 20, 14.
-    #[arg(short, long, default_value_t = 6)]
+    #[arg(short, long, default_value_t = 4)]
     cols: usize,
 
     /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
@@ -34,11 +34,14 @@ struct Args {
 }
 
 /// Index into starmap.
-#[derive(PartialEq, Eq, Hash)]
-struct RowCol {
-    row: usize,
-    col: usize
-}
+type RowCol = (usize,usize);
+
+/// Index into starmap.
+// #[derive(PartialEq, Eq, Hash)]
+// struct RowCol {
+//     row: usize,
+//     col: usize
+// }
 
 /// Map from RowCol to characteristic string for star system at that location.
 type StarMap = HashMap<RowCol, String>;
@@ -195,7 +198,7 @@ fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_lengt
         }
         else {
             // Star system! Draw symbol.
-            starmap.insert(RowCol{row, col: 2*i+1}, "".to_string());
+            starmap.insert((row, 2*i+1), "".to_string());
             let starchar = if a_diag_length <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{}{:<space1_width$}{}{:<space2_width$}{}{:_<edge_width$}", "/", "", starchar, "", "\\", ""
                 ,space1_width = (a_horizontal_length - 1)/2 + a_diag_length - 1      // -1 for starchar, /2 to split in half (both sides)
@@ -234,7 +237,7 @@ fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: usize, a_diag_width
         }
         else {
             // Star system! Draw symbol.
-            starmap.insert(RowCol{row, col: 2*i+1}, "".to_string());
+            starmap.insert((row, 2*(i+1)), "".to_string());
             let starchar = if a_diag_width <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:center1_width$}{}{:center2_width$}"
                 , "\\", "", "/", "", starchar, ""
@@ -253,9 +256,16 @@ fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: usize, a_diag_width
 fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, cols: usize) {
     for row in 1..=rows {
         for col in 1..=cols {
-            let hex = RowCol{ row, col};
-            starmap.entry( hex).and_modify(|s| {*s = "done".to_string()});
-            println!( "{:02}{:02} -- {}", row, col, starmap.get(&hex).unwrap());
+            let hex = ( row, col);
+            let entry = starmap.entry( hex)
+                .and_modify(|s| {*s = "done".to_string()});
+            let entry = starmap.get( &hex);
+            match entry {
+                Some( uwp) => {
+                    println!( "{:02}{:02} -- {}", row, col, starmap[&hex]);
+                }
+                None => {}
+            }
         }
     }
 }
