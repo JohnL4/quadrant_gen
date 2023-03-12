@@ -36,6 +36,46 @@ struct Args {
 /// Index into starmap.
 type RowCol = (usize,usize);
 
+// #[derive(Debug)]
+struct StarSystem {
+    size: char,
+    atmosphere: char,
+    hydrographics: char,
+    population: char,
+    government: char,
+    law_level: char,
+    technology: char,
+    starport: char
+}
+
+impl StarSystem {
+    pub fn generate() -> StarSystem {
+        return StarSystem {
+            size: '7'
+            , atmosphere: '7'
+            , hydrographics: '7'
+            , population: '7'
+            , government: '7'
+            , law_level: '7'
+            , technology: '7'
+            , starport: 'B'
+        }
+    }
+    /// Universal World Profile
+    pub fn uwp(&self) -> String {
+        return format!( "{}-{}{}{}{}{}{}-{}"
+            , self.starport
+            , self.size
+            , self.atmosphere
+            , self.hydrographics
+            , self.population
+            , self.government
+            , self.law_level
+            , self.technology
+        );
+    }
+}
+
 /// Index into starmap.
 // #[derive(PartialEq, Eq, Hash)]
 // struct RowCol {
@@ -44,7 +84,7 @@ type RowCol = (usize,usize);
 // }
 
 /// Map from RowCol to characteristic string for star system at that location.
-type StarMap = HashMap<RowCol, String>;
+type StarMap = HashMap<RowCol, StarSystem>;
 
 fn main() {
     let args = Args::parse();
@@ -198,7 +238,7 @@ fn draw_hex_middles(row: usize, num_cols: usize, density_dm: usize, a_diag_lengt
         }
         else {
             // Star system! Draw symbol.
-            starmap.insert((row, 2*i+1), "".to_string());
+            starmap.insert((row, 2*i+1), StarSystem::generate());
             let starchar = if a_diag_length <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{}{:<space1_width$}{}{:<space2_width$}{}{:_<edge_width$}", "/", "", starchar, "", "\\", ""
                 ,space1_width = (a_horizontal_length - 1)/2 + a_diag_length - 1      // -1 for starchar, /2 to split in half (both sides)
@@ -237,7 +277,7 @@ fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: usize, a_diag_width
         }
         else {
             // Star system! Draw symbol.
-            starmap.insert((row, 2*(i+1)), "".to_string());
+            starmap.insert((row, 2*(i+1)), StarSystem::generate());
             let starchar = if a_diag_width <= 2 {"o"} else {"O"};      // big hexes ==> bigger symbol, for looks
             print!( "{:>diag_width$}{:_<a_horiz_width$}{:<diag_width$}{:center1_width$}{}{:center2_width$}"
                 , "\\", "", "/", "", starchar, ""
@@ -257,12 +297,12 @@ fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, co
     for row in 1..=rows {
         for col in 1..=cols {
             let hex = ( row, col);
-            let entry = starmap.entry( hex)
-                .and_modify(|s| {*s = "done".to_string()});
+            // let entry = starmap.entry( hex)
+            //     .and_modify(|s| {*s = "done".to_string()});
             let entry = starmap.get( &hex);
             match entry {
-                Some( uwp) => {
-                    println!( "{:02}{:02} -- {}", row, col, starmap[&hex]);
+                Some( starsys) => {
+                    println!( "{:02}{:02} -- {}", row, col, starsys.uwp());
                 }
                 None => {}
             }
