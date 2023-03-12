@@ -302,7 +302,7 @@ fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, co
             let entry = starmap.get( &hex);
             match entry {
                 Some( starsys) => {
-                    println!( "{:02}{:02} -- {}", row, col, starsys.uwp());
+                    println!( "{:02}{:02}    {}", row, col, starsys.uwp());
                 }
                 None => {}
             }
