@@ -20,18 +20,18 @@ pub struct StarSystem {
 }
 
 // ORDERED list of starport die throws, 2-11.  Will be binary searched.
-const STARPORTS: &[(usize, char)] = &[
-    (2, 'X')
-    , (3, 'E')
-    , (4, 'E')
-    , (5, 'D')
-    , (6, 'D')
-    , (7, 'C')
-    , (8, 'C')
-    , (9, 'B')
-    , (10, 'B')
-    , (11, 'A')
-    ];
+// const STARPORTS: &[(usize, char)] = &[
+//     (2, 'X')
+//     , (3, 'E')
+//     , (4, 'E')
+//     , (5, 'D')
+//     , (6, 'D')
+//     , (7, 'C')
+//     , (8, 'C')
+//     , (9, 'B')
+//     , (10, 'B')
+//     , (11, 'A')
+//     ];
 
 // See:
 //   https://www.traveller-srd.com/core-rules/world-creation/
@@ -39,14 +39,15 @@ const STARPORTS: &[(usize, char)] = &[
 
 impl StarSystem {
     pub fn generate(rng: &mut ThreadRng) -> StarSystem {
-        static starports: Vec<(usize, char)> = Vec::new();
+        // static starports: Vec<(usize, char)> = Vec::new();
 
         // With luck, this will only execute once.
-        if starports.len() == 0 {
-            for t in STARPORTS {
-                starports.push( *t);
-            }
-        }
+        // if starports.len() == 0 {
+        //     for t in STARPORTS {
+        //         starports.push( *t);
+        //     }
+        // }
+        // Well, I tried.
 
         let size = dice(2, -2, rng);
         let atmo = clamp( dice(2, -7 + size, rng), 0, 15);
@@ -61,10 +62,19 @@ impl StarSystem {
         let govt = clamp( dice( 2, -7 + pop, rng), 0, 13);
         let law = clamp( dice( 2, -7 + govt, rng), 0, 15);
         let starport = 
-            starports[
-            starports.binary_search_by_key(
-                 &(clamp( dice(2, 0, rng), 2, 11) as usize),
-                 | &(n,c)| n).unwrap()].1;
+            match clamp( dice(2, 0, rng), 2, 11) {
+                2 => 'X',
+                3 | 4 => 'E',
+                5 | 6 => 'D',
+                7 | 8 => 'C',
+                9 | 10 => 'B',
+                11 => 'A',
+                _ => unreachable!()
+            };
+            // starports[
+            // starports.binary_search_by_key(
+            //      &(clamp( dice(2, 0, rng), 2, 11) as usize),
+            //      | &(n,c)| n).unwrap()].1;
         // And finally...
         let tech = clamp( dice(1, 0, rng)
             + match starport {
@@ -75,7 +85,8 @@ impl StarSystem {
                 }
             + match size {
                 0 | 1 => 2,
-                2..=4 => 1
+                2..=4 => 1,
+                _ => 0
                 }
             + match atmo {
                 0..=3 => 1,
@@ -120,12 +131,12 @@ impl StarSystem {
     pub fn uwp(&self) -> String {
         return format!( "{}-{}{}{}{}{}{}-{}"
             , self.starport
-            , self.size
-            , self.atmosphere
-            , self.hydrographics
-            , self.population
-            , self.government
-            , self.law_level
+            , code( self.size)
+            , code( self.atmosphere)
+            , code( self.hydrographics)
+            , code( self.population)
+            , code( self.government)
+            , code( self.law_level)
             , self.technology
         );
     }
