@@ -6,7 +6,14 @@ use rand::prelude::*;
 use quadrant_gen::star_map::*;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version /* , about  , long_about = None */ )]     // Leaving out {,long_}about results in the following doc comment being used, see https://docs.rs/clap/latest/clap/_derive/index.html#doc-comments
+/// Generate a Traveller sector map, in character mode
+/// 
+/// Uses rules from the Traveller SRD at https://www.traveller-srd.com/core-rules/world-creation/, with possible 
+/// additions from https://www.reddit.com/r/traveller/comments/o72ca1/world_creation_rules_on_one_page/.
+/// 
+/// By default, generates a long, skinny subsector with hexes labelled in the x-y style (column, row), but it can 
+/// generate sectors of any size/shape and you can switch to (row, column) labelling, if you want (you probably don't).
 struct Args {
     /// Number of rows in map.  Conventional values are 10, 20, 14.
     #[arg(short, long, default_value_t = 10)]

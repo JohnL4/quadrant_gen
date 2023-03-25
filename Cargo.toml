@@ -1,7 +1,10 @@
 [package]
 name = "quadrant_gen"
-version = "0.1.0"
+version = "1.3.0"
 edition = "2021"
+authors = ["John Lusk <john-quadrant_gen@how-hard-can-it-be.com>"]
+description = "Generate a Traveller sector map, in character mode"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
