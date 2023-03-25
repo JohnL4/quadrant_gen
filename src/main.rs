@@ -37,7 +37,7 @@ struct Args {
 
 #[derive( Copy, Clone, Debug, ValueEnum)]
 enum AxisStyle {
-    /// The first two characters are the ROW number and the last two characters are the COLUMN number.
+    /// The first two characters are the row number and the last two characters are the column number.
     RowCol,
 
     /// The first two characters are the x-coordinate (column number), and the last two characters are the y-coordinate
@@ -45,70 +45,18 @@ enum AxisStyle {
     XY
 }
 
-// /// Index into starmap.
-// type RowCol = (usize,usize);
-
-// // #[derive(Debug)]
-// struct StarSystem {
-//     size: char,
-//     atmosphere: char,
-//     hydrographics: char,
-//     population: char,
-//     government: char,
-//     law_level: char,
-//     technology: char,
-//     starport: char
-// }
-
-// impl StarSystem {
-//     pub fn generate() -> StarSystem {
-//         return StarSystem {
-//             size: '7'
-//             , atmosphere: '7'
-//             , hydrographics: '7'
-//             , population: '7'
-//             , government: '7'
-//             , law_level: '7'
-//             , technology: '7'
-//             , starport: 'B'
-//         }
-//     }
-//     /// Universal World Profile
-//     pub fn uwp(&self) -> String {
-//         return format!( "{}-{}{}{}{}{}{}-{}"
-//             , self.starport
-//             , self.size
-//             , self.atmosphere
-//             , self.hydrographics
-//             , self.population
-//             , self.government
-//             , self.law_level
-//             , self.technology
-//         );
-//     }
-// }
-
-// /// Index into starmap.
-// // #[derive(PartialEq, Eq, Hash)]
-// // struct RowCol {
-// //     row: usize,
-// //     col: usize
-// // }
-
-// /// Map from RowCol to characteristic string for star system at that location.
-// type StarMap = HashMap<RowCol, StarSystem>;
-
 fn main() {
+
+    // General implementation note: my initial implementation of this assumed hexes laid out in rows and columns, and
+    // addressed that way, meaning the first two characters of the coordinates (upon display) are the ROW number, and
+    // the last two characters are the COLUMN number.  Only after I was done did I realize (I had forgotten) that the
+    // standard coordinate system is transposed, and it's more like x-y coordinates (with the y-axis reversed).  So, I
+    // hacked in a fix for that, but the concept in this code is still row-column.
+
     let args = Args::parse();
     let mut rng = thread_rng();
     let mut starmap: StarMap = HashMap::new();
 
-    // for i in 1..=6 {
-    //     print!( "{:4}: {:<6}", i, rng.gen_range( 1..=6));
-    // }
-    // println!();
-    // println!( "1<<15 = {}", 1<<15);
-    // generate_systems( &mut rng);
     draw_grid( args.rows, args.cols, args.world_chance_die_modifier, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng, &mut starmap);
     generate_systems( &mut starmap, &mut rng, args.rows, args.cols, args.axis_style);
 }
