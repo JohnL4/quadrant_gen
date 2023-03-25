@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use rand::prelude::*;
 
 use quadrant_gen::star_map::*;
@@ -8,12 +8,12 @@ use quadrant_gen::star_map::*;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Number of rows in map.  Conventional values are 8, 16, 32.
-    #[arg(short, long, default_value_t = 8)]
+    /// Number of rows in map.  Conventional values are 10, 20, 14.
+    #[arg(short, long, default_value_t = 10)]
     rows: usize,
 
-    /// Number of columns in map.  Conventional values are 10, 20, 14.
-    #[arg(short, long, default_value_t = 10)]
+    /// Number of columns in map.  Conventional values are 8, 16, 32.
+    #[arg(short, long, default_value_t = 8)]
     cols: usize,
 
     /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
@@ -28,7 +28,21 @@ struct Args {
 
     /// Number of characters in diagonal hex cell.
     #[arg(short('d'), long, default_value_t = 2)]
-    diagonal_edge_length: usize
+    diagonal_edge_length: usize,
+
+    /// Axis style.
+    #[arg( short, long, value_enum, default_value_t = AxisStyle::XY )]
+    axis_style: AxisStyle
+}
+
+#[derive( Copy, Clone, Debug, ValueEnum)]
+enum AxisStyle {
+    /// The first two characters are the ROW number and the last two characters are the COLUMN number.
+    RowCol,
+
+    /// The first two characters are the x-coordinate (column number), and the last two characters are the y-coordinate
+    /// (row number)
+    XY
 }
 
 // /// Index into starmap.
@@ -96,7 +110,7 @@ fn main() {
     // println!( "1<<15 = {}", 1<<15);
     // generate_systems( &mut rng);
     draw_grid( args.rows, args.cols, args.world_chance_die_modifier, args.horizontal_edge_length, args.diagonal_edge_length, &mut rng, &mut starmap);
-    generate_systems( &mut starmap, &mut rng, args.rows, args.cols);
+    generate_systems( &mut starmap, &mut rng, args.rows, args.cols, args.axis_style);
 }
 
 /// Draw a hex grid
@@ -291,19 +305,35 @@ fn draw_hex_bottoms(row: usize, num_cols: usize, density_dm: isize, a_diag_width
 }
 
 /// Generate star systems.
-fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, cols: usize) {
-    for row in 1..=rows {
-        for col in 1..=cols {
-            let hex = ( row, col);
-            // let entry = starmap.entry( hex)
-            //     .and_modify(|s| {*s = "done".to_string()});
-            let entry = starmap.get( &hex);
-            match entry {
-                Some( starsys) => {
-                    println!( "{:02}{:02}    {}", row, col, starsys.uwp());
+fn generate_systems( starmap: &mut StarMap, rng: &mut ThreadRng, rows: usize, cols: usize, axis_style: AxisStyle) {
+    match axis_style {
+        AxisStyle::RowCol => {
+            for row in 1..=rows {
+                for col in 1..=cols {
+                    print_star_system( row, col, starmap, axis_style);
                 }
-                None => {}
             }
         }
+        AxisStyle::XY => {
+            for col in 1..=cols {
+                for row in 1..=rows {
+                    print_star_system(row, col, starmap, axis_style)
+                }
+            }
+        }
+    }
+}
+
+fn print_star_system(row: usize, col: usize, starmap: &mut HashMap<(usize, usize), StarSystem>, axis_style: AxisStyle) {
+    let hex = ( row, col);
+    let entry = starmap.get( &hex);
+    match entry {
+        Some( starsys) => {
+            match axis_style {
+                AxisStyle::RowCol => {println!( "{:02}{:02}    {}", row, col, starsys.uwp())}
+                AxisStyle::XY => {println!( "{:02}{:02}    {}", col, row, starsys.uwp())}
+            }
+        }
+        None => {}
     }
 }
