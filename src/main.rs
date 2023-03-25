@@ -16,6 +16,10 @@ struct Args {
     #[arg(short, long, default_value_t = 8)]
     cols: usize,
 
+    /// Axis style.
+    #[arg( short, long, value_enum, default_value_t = AxisStyle::XY )]
+    axis_style: AxisStyle,
+
     /// DM (die modifier) to be applied to the d6 throw to determine whether a system is present in a hex.  The default
     /// (0) will result in a 50% chance of a star system being present.  -2 ==> rift sector; -1 ==> sparse sector;
     /// +1 ==> dense sector.
@@ -28,11 +32,7 @@ struct Args {
 
     /// Number of characters in diagonal hex cell.
     #[arg(short('d'), long, default_value_t = 2)]
-    diagonal_edge_length: usize,
-
-    /// Axis style.
-    #[arg( short, long, value_enum, default_value_t = AxisStyle::XY )]
-    axis_style: AxisStyle
+    diagonal_edge_length: usize
 }
 
 #[derive( Copy, Clone, Debug, ValueEnum)]
